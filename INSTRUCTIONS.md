@@ -99,5 +99,4 @@ Response should have 2 required fields in `json` format (if you need other field
   "userId": 1, // uint64
   "balance": "9.25" // string, rounded to 2 decimal places
 }
-``
 ```

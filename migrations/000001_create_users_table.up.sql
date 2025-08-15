@@ -1,0 +1,5 @@
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    balance DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
