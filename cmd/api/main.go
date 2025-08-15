@@ -11,6 +11,8 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+
+	"github.com/orkhan-huseyn/entain-test-task/internal/data"
 )
 
 type config struct {
@@ -27,6 +29,7 @@ type config struct {
 type application struct {
 	config config
 	logger *slog.Logger
+	models data.Models
 }
 
 func main() {
@@ -55,6 +58,7 @@ func main() {
 	app := &application{
 		logger: logger,
 		config: cfg,
+		models: data.NewModels(db),
 	}
 
 	srv := &http.Server{
