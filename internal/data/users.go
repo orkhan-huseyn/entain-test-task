@@ -9,7 +9,7 @@ import (
 
 type User struct {
 	ID        uint64    `json:"userId"`
-	Balance   string    `json:"balance"`
+	Balance   float64   `json:"balance"`
 	CreatedAt time.Time `json:"-"`
 }
 

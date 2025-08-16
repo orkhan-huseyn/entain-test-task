@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/orkhan-huseyn/entain-test-task/internal/data"
+	"github.com/orkhan-huseyn/entain-test-task/internal/validator"
 )
 
 func (app *application) getUserBalance(w http.ResponseWriter, r *http.Request) {
-	userId, err := strconv.Atoi(r.PathValue("userId"))
+	userId, err := validator.ValidateUserId(r.PathValue("userId"))
 	if err != nil {
-		app.notFoundResponse(w, r)
+		app.badRequestResponse(w, r, err.Error())
 		return
 	}
 
@@ -33,13 +33,17 @@ func (app *application) getUserBalance(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) createTransaction(w http.ResponseWriter, r *http.Request) {
-	userId, err := strconv.Atoi(r.PathValue("userId"))
+	userId, err := validator.ValidateUserId(r.PathValue("userId"))
 	if err != nil {
-		app.notFoundResponse(w, r)
+		app.badRequestResponse(w, r, err.Error())
 		return
 	}
 
-	sourceType := r.Header.Get("Source-Type")
+	sourceType, err := validator.ValidateSourceType(r.Header.Get("Source-Type"))
+	if err != nil {
+		app.badRequestResponse(w, r, err.Error())
+		return
+	}
 
 	var input struct {
 		State         string `json:"state"`
@@ -53,13 +57,24 @@ func (app *application) createTransaction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	amount, err := strconv.ParseFloat(input.Amount, 64)
+	err = validator.ValidateTransactionState(input.State)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		app.badRequestResponse(w, r, err.Error())
 		return
 	}
 
-	// TODO: validate userId, sourceType, state, amount and transactionId
+	amount, err := validator.ValidateTransactionAmount(input.Amount)
+	if err != nil {
+		app.badRequestResponse(w, r, err.Error())
+		return
+	}
+
+	err = validator.ValidateTransactionId(input.TransactionID)
+	if err != nil {
+		app.badRequestResponse(w, r, err.Error())
+		return
+	}
+
 	transaction := &data.Transaction{
 		TransactionID: input.TransactionID,
 		Amount:        amount,
@@ -68,7 +83,7 @@ func (app *application) createTransaction(w http.ResponseWriter, r *http.Request
 		SourceType:    sourceType,
 	}
 
-	// TODO: wrap transaction insert and user balance update into DB TRANSACTION
+	// TODO: BEGIN transaction
 	err = app.models.Transactions.Insert(transaction)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
@@ -80,12 +95,27 @@ func (app *application) createTransaction(w http.ResponseWriter, r *http.Request
 		balanceIncrement *= -1
 	}
 
-	// TODO: validate user balance to it doesn't go negative
+	user, err := app.models.Users.Get(userId)
+	if err != nil {
+		if errors.Is(err, data.ErrRecordNotFound) {
+			app.notFoundResponse(w, r)
+		} else {
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	if user.Balance+balanceIncrement < 0 {
+		app.badRequestResponse(w, r, "user's balance cannot be negative")
+		return
+	}
+
 	err = app.models.Users.Update(uint64(userId), balanceIncrement)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
+	// TODO: END transaction
 
 	app.writeJSON(w, 200, transaction, nil)
 }
