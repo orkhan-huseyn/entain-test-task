@@ -30,6 +30,7 @@ type application struct {
 	config config
 	logger *slog.Logger
 	models data.Models
+	db     *sql.DB
 }
 
 func main() {
@@ -59,6 +60,7 @@ func main() {
 		logger: logger,
 		config: cfg,
 		models: data.NewModels(db),
+		db:     db,
 	}
 
 	srv := &http.Server{

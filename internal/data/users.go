@@ -8,9 +8,9 @@ import (
 )
 
 type User struct {
-	ID        uint64    `json:"userId"`
-	Balance   float64   `json:"balance"`
-	CreatedAt time.Time `json:"-"`
+	ID        uint64
+	Balance   float64
+	CreatedAt time.Time
 }
 
 type UserModel struct {
@@ -45,7 +45,7 @@ func (u *UserModel) Get(id uint64) (*User, error) {
 	return &user, nil
 }
 
-func (u *UserModel) Update(id uint64, balanceIncrement float64) error {
+func (u *UserModel) Update(txn *sql.Tx, id uint64, balanceIncrement float64) error {
 	query := `
 		UPDATE users
 		SET balance = balance + $1
@@ -56,7 +56,7 @@ func (u *UserModel) Update(id uint64, balanceIncrement float64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := u.DB.QueryRowContext(ctx, query, args...).Err()
+	err := txn.QueryRowContext(ctx, query, args...).Err()
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):

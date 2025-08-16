@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/orkhan-huseyn/entain-test-task/internal/data"
@@ -26,7 +27,15 @@ func (app *application) getUserBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = app.writeJSON(w, http.StatusOK, user, nil)
+	var output struct {
+		UserID  uint64 `json:"userId"`
+		Balance string `json:"balance"`
+	}
+
+	output.UserID = user.ID
+	output.Balance = fmt.Sprintf("%.2f", user.Balance)
+
+	err = app.writeJSON(w, http.StatusOK, output, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
@@ -83,8 +92,15 @@ func (app *application) createTransaction(w http.ResponseWriter, r *http.Request
 		SourceType:    sourceType,
 	}
 
-	// TODO: BEGIN transaction
-	err = app.models.Transactions.Insert(transaction)
+	txn, err := app.db.Begin()
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	defer txn.Rollback()
+
+	err = app.models.Transactions.Insert(txn, transaction)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
@@ -110,12 +126,12 @@ func (app *application) createTransaction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = app.models.Users.Update(uint64(userId), balanceIncrement)
+	err = app.models.Users.Update(txn, uint64(userId), balanceIncrement)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	// TODO: END transaction
+	txn.Commit()
 
 	app.writeJSON(w, 200, transaction, nil)
 }

@@ -19,16 +19,22 @@ type TransactionModel struct {
 	DB *sql.DB
 }
 
-func (t *TransactionModel) Insert(txn *Transaction) error {
+func (t *TransactionModel) Insert(txn *sql.Tx, transaction *Transaction) error {
 	query := `
 		INSERT INTO transactions (transaction_id, user_id, amount, state, source_type)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING created_at`
 
-	args := []any{txn.TransactionID, txn.UserID, txn.Amount, txn.State, txn.SourceType}
+	args := []any{
+		transaction.TransactionID,
+		transaction.UserID,
+		transaction.Amount,
+		transaction.State,
+		transaction.SourceType,
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	return t.DB.QueryRowContext(ctx, query, args...).Scan(&txn.CreatedAt)
+	return txn.QueryRowContext(ctx, query, args...).Scan(&transaction.CreatedAt)
 }
