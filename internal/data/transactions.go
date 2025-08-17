@@ -8,7 +8,7 @@ import (
 
 type Transaction struct {
 	TransactionID string    `json:"transactionId"`
-	UserID        int64     `json:"-"`
+	UserID        uint64    `json:"-"`
 	Amount        float64   `json:"amount"`
 	State         string    `json:"state"`
 	SourceType    string    `json:"sourceType"`

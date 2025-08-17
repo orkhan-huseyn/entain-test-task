@@ -17,8 +17,8 @@ func ValidateUserId(userId string) (uint64, error) {
 		return 0, err
 	}
 
-	if parsedUserId < 0 {
-		return 0, errors.New("userId cannot be negative number")
+	if parsedUserId < 1 {
+		return 0, errors.New("userId cannot be less than 1")
 	}
 
 	return uint64(parsedUserId), nil

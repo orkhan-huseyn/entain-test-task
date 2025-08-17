@@ -17,7 +17,7 @@ func (app *application) getUserBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := app.models.Users.Get(uint64(userId))
+	user, err := app.models.Users.Get(userId)
 	if err != nil {
 		if errors.Is(err, data.ErrRecordNotFound) {
 			app.notFoundResponse(w, r)
@@ -88,13 +88,23 @@ func (app *application) createTransaction(w http.ResponseWriter, r *http.Request
 		TransactionID: input.TransactionID,
 		Amount:        amount,
 		State:         input.State,
-		UserID:        int64(userId),
+		UserID:        userId,
 		SourceType:    sourceType,
 	}
 
 	txn, err := app.db.Begin()
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	user, err := app.models.Users.GetForUpdate(txn, userId)
+	if err != nil {
+		if errors.Is(err, data.ErrRecordNotFound) {
+			app.notFoundResponse(w, r)
+		} else {
+			app.serverErrorResponse(w, r, err)
+		}
 		return
 	}
 
@@ -109,16 +119,6 @@ func (app *application) createTransaction(w http.ResponseWriter, r *http.Request
 	balanceIncrement := amount
 	if input.State == "lose" {
 		balanceIncrement *= -1
-	}
-
-	user, err := app.models.Users.Get(userId)
-	if err != nil {
-		if errors.Is(err, data.ErrRecordNotFound) {
-			app.notFoundResponse(w, r)
-		} else {
-			app.serverErrorResponse(w, r, err)
-		}
-		return
 	}
 
 	if user.Balance+balanceIncrement < 0 {
