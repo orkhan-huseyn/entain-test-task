@@ -97,6 +97,7 @@ func (app *application) createTransaction(w http.ResponseWriter, r *http.Request
 		app.serverErrorResponse(w, r, err)
 		return
 	}
+	defer txn.Rollback()
 
 	user, err := app.models.Users.GetForUpdate(txn, userId)
 	if err != nil {
@@ -107,8 +108,6 @@ func (app *application) createTransaction(w http.ResponseWriter, r *http.Request
 		}
 		return
 	}
-
-	defer txn.Rollback()
 
 	err = app.models.Transactions.Insert(txn, transaction)
 	if err != nil {

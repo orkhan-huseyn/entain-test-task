@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:16
-    container_name: postgres_db
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
@@ -10,6 +9,34 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  migrate:
+    image: migrate/migrate
+    depends_on:
+      - postgres
+    command:
+      [
+        "-path",
+        "/migrations",
+        "-database",
+        "postgres://root:root@postgres:5432/entain?sslmode=disable",
+        "up",
+      ]
+    volumes:
+      - ./migrations:/migrations
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - postgres
+      - migrate
+    environment:
+      ENTAIN_DB_DSN: postgres://root:root@postgres:5432/entain?sslmode=disable
+    ports:
+      - "8080:8080"
     restart: unless-stopped
 
 volumes:
